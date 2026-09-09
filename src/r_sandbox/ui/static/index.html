@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="R-Sandbox 로컬 연구 프로젝트 보안 워크벤치">
+  <title>R-Sandbox · Security Workbench</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#results">결과로 건너뛰기</a>
+  <div class="ambient-grid" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <span>R</span>
+      </div>
+      <div>
+        <p class="eyebrow">LOCAL SECURITY AGENT</p>
+        <h1>R-Sandbox</h1>
+      </div>
+    </div>
+    <div class="runtime-pill" id="docker-pill" data-state="checking">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span id="docker-label">Docker 확인 중</span>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="control-panel" aria-labelledby="setup-title">
+      <div class="panel-heading">
+        <div>
+          <p class="section-index">01 / REQUEST</p>
+          <h2 id="setup-title">검사 설정</h2>
+        </div>
+        <span class="local-badge">127.0.0.1 전용</span>
+      </div>
+
+      <form id="run-form" novalidate>
+        <label class="field">
+          <span class="field-label">프로젝트 폴더</span>
+          <input id="repository" name="repository" type="text" autocomplete="off"
+                 spellcheck="false" required aria-describedby="repository-help">
+          <small id="repository-help">분석할 연구 저장소의 절대 경로</small>
+        </label>
+
+        <label class="field">
+          <span class="field-label">연구 목표</span>
+          <textarea id="goal" name="goal" rows="3" required
+                    placeholder="예: 학습 결과를 재현하고 외부 전송 위험을 확인"></textarea>
+        </label>
+
+        <fieldset class="mode-fieldset">
+          <legend>검사 방식</legend>
+          <label class="mode-option">
+            <input type="radio" name="mode" value="analyze" checked>
+            <span class="mode-copy">
+              <strong>정적 분석</strong>
+              <small>코드를 실행하지 않고 구조와 권한을 추론</small>
+            </span>
+            <span class="mode-code">A</span>
+          </label>
+          <label class="mode-option">
+            <input type="radio" name="mode" value="dry-run">
+            <span class="mode-copy">
+              <strong>실행 미리보기</strong>
+              <small>프로젝트별 Docker 계약만 생성</small>
+            </span>
+            <span class="mode-code">D</span>
+          </label>
+          <label class="mode-option">
+            <input type="radio" name="mode" value="shadow">
+            <span class="mode-copy">
+              <strong>격리 실행</strong>
+              <small>Docker에서 실제 보안 사전검사</small>
+            </span>
+            <span class="mode-code">S</span>
+          </label>
+        </fieldset>
+
+        <details class="advanced">
+          <summary>고급 설정</summary>
+          <div class="advanced-body">
+            <label class="field">
+              <span class="field-label">컨테이너 이미지</span>
+              <input id="image" name="image" type="text" spellcheck="false">
+              <small>재현 가능한 검사는 sha256 digest 고정을 권장</small>
+            </label>
+            <label class="field">
+              <span class="field-label">출력 폴더 <em>선택</em></span>
+              <input id="output" name="output" type="text" spellcheck="false"
+                     placeholder="비워두면 저장소 옆에 자동 생성">
+            </label>
+            <label class="field">
+              <span class="field-label">이번 검사 승인 ID <em>선택</em></span>
+              <textarea id="approvals" rows="2" spellcheck="false"
+                        placeholder="cap-… 값을 줄바꿈으로 구분"></textarea>
+            </label>
+            <label class="field">
+              <span class="field-label">허용할 네트워크 대상 <em>선택</em></span>
+              <textarea id="network" rows="2" spellcheck="false"
+                        placeholder="datasets.example.org:443"></textarea>
+            </label>
+          </div>
+        </details>
+
+        <div class="shadow-warning" id="shadow-warning" hidden>
+          <strong>실제 코드 실행</strong>
+          <span>검토된 이미지와 전용 출력 폴더를 사용해 Docker에서 실행합니다.</span>
+        </div>
+
+        <button class="run-button" id="run-button" type="submit">
+          <span id="run-button-label">보안 검사 시작</span>
+          <span class="button-arrow" aria-hidden="true">↗</span>
+        </button>
+        <p class="form-status" id="form-status" aria-live="polite">설정을 확인한 뒤 검사를 시작하세요.</p>
+      </form>
+    </aside>
+
+    <section class="results-panel" id="results" aria-labelledby="results-title">
+      <div class="results-heading">
+        <div>
+          <p class="section-index">02 / EVIDENCE</p>
+          <h2 id="results-title">보안 판정</h2>
+        </div>
+        <div class="result-actions">
+          <span class="elapsed" id="elapsed">미실행</span>
+          <button class="ghost-button" id="download-report" type="button" disabled>
+            JSON 내보내기
+          </button>
+        </div>
+      </div>
+
+      <div class="truth-banner" id="truth-banner" data-state="idle" role="status" aria-live="polite">
+        <span class="truth-icon" aria-hidden="true">◇</span>
+        <div>
+          <strong id="truth-title">검사 대기</strong>
+          <p id="truth-copy">실행 결과와 보안 게이트를 분리해 보여줍니다.</p>
+        </div>
+      </div>
+
+      <ol class="pipeline" id="pipeline" aria-label="에이전트 실행 단계">
+        <li data-phase="observe"><span>01</span>수집</li>
+        <li data-phase="understand"><span>02</span>이해</li>
+        <li data-phase="plan"><span>03</span>계획</li>
+        <li data-phase="authorize"><span>04</span>권한</li>
+        <li data-phase="build"><span>05</span>구성</li>
+        <li data-phase="execute"><span>06</span>실행</li>
+        <li data-phase="monitor"><span>07</span>감시</li>
+        <li data-phase="reflect"><span>08</span>회고</li>
+        <li data-phase="report"><span>09</span>보고</li>
+      </ol>
+
+      <div class="summary-grid">
+        <article class="metric-card primary-metric" id="gate-card" data-state="idle">
+          <p>SECURITY GATE</p>
+          <strong id="gate-value">미평가</strong>
+          <span id="gate-detail">검사를 시작하면 정책 결과가 표시됩니다.</span>
+        </article>
+        <article class="metric-card" id="outcome-card" data-state="idle">
+          <p>EXECUTION</p>
+          <strong id="outcome-value">대기</strong>
+          <span id="outcome-detail">연구 코드는 아직 실행되지 않았습니다.</span>
+        </article>
+        <article class="metric-card risk-card" id="risk-card" data-state="idle">
+          <div class="risk-dial" id="risk-dial" style="--risk: 0">
+            <span id="risk-value">—</span>
+          </div>
+          <div>
+            <p>RISK SCORE</p>
+            <strong id="risk-label">미측정</strong>
+          </div>
+        </article>
+        <article class="metric-card decisions-card">
+          <p>AUTHORITY</p>
+          <div class="decision-counts">
+            <span><b id="allow-count">0</b> 허용</span>
+            <span><b id="deny-count">0</b> 차단</span>
+            <span><b id="pending-count">0</b> 승인 필요</span>
+          </div>
+        </article>
+      </div>
+
+      <section class="priority-card" aria-labelledby="priority-title">
+        <div class="priority-heading">
+          <div>
+            <p class="section-index">PRIORITY SIGNALS</p>
+            <h3 id="priority-title">우선 확인할 항목</h3>
+          </div>
+          <span id="signal-count">0건</span>
+        </div>
+        <ul id="priority-list" class="priority-list">
+          <li class="empty-row">
+            <span class="signal-marker neutral"></span>
+            <div>
+              <strong>아직 수집된 증거가 없습니다.</strong>
+              <p>정적 분석부터 시작하면 실행 없이 위험 단서를 확인할 수 있습니다.</p>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section class="detail-section" aria-labelledby="detail-title">
+        <div class="detail-heading">
+          <h3 id="detail-title">상세 증거</h3>
+          <div class="tabs" role="tablist" aria-label="상세 결과">
+            <button role="tab" aria-selected="true" aria-controls="tab-findings"
+                    id="tab-button-findings" data-tab="findings">발견 위험</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-authority"
+                    id="tab-button-authority" data-tab="authority">권한 결정</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-runtime"
+                    id="tab-button-runtime" data-tab="runtime">런타임</button>
+            <button role="tab" aria-selected="false" aria-controls="tab-report"
+                    id="tab-button-report" data-tab="report">전체 보고서</button>
+          </div>
+        </div>
+        <div class="tab-panel" id="tab-findings" role="tabpanel"
+             aria-labelledby="tab-button-findings"></div>
+        <div class="tab-panel" id="tab-authority" role="tabpanel"
+             aria-labelledby="tab-button-authority" hidden></div>
+        <div class="tab-panel" id="tab-runtime" role="tabpanel"
+             aria-labelledby="tab-button-runtime" hidden></div>
+        <div class="tab-panel report-panel" id="tab-report" role="tabpanel"
+             aria-labelledby="tab-button-report" hidden>
+          <div class="sensitive-note">로컬 경로와 보안 메타데이터가 포함될 수 있습니다. 공유 전 검토하세요.</div>
+          <pre id="raw-report">검사 완료 후 정제된 JSON 보고서가 표시됩니다.</pre>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer>
+    <span>R-Sandbox · local session only</span>
+    <span>실행 성공 ≠ 보안 통과</span>
+  </footer>
+</body>
+</html>

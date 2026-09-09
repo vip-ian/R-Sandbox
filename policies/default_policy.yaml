@@ -1,0 +1,56 @@
+# Reference policy contract. Runtime enforcement lives in
+# src/r_sandbox/policy/engine.py until a signed policy loader is implemented.
+version: 1
+default: deny
+
+filesystem:
+  repository: read-only
+  output: fresh-per-run-read-write
+  temporary: private-tmpfs-read-write
+  shared_memory: private-bounded-read-write
+  host_paths: deny
+  sensitive_names: [.env, .ssh, .aws, .gnupg, credentials, id_rsa]
+
+network:
+  default: deny
+  domain_allowlist_requires_enforcing_proxy: true
+  private_and_link_local: deny
+  uploads: deny
+
+environment:
+  inherit_host: false
+  host_secrets: deny
+  image_config_env: trusted-reviewed-image-input
+  image_baked_secrets: forbidden-by-operator-contract-not-scrubbed
+
+process:
+  allowed_executables: [python, python3]
+  initial_entrypoint_only: true
+  child_process_spawn: deny
+  shell: false
+  linux_capabilities: drop-all
+  no_new_privileges: true
+
+device:
+  gpu_access: approval-required-coarse-all-gpus
+  inspect_only: deny-unenforceable
+
+container_runtime:
+  backend: docker-local
+  platform: linux/amd64
+  minimum_engine_api: "1.49"
+  image_pull: never
+  declared_volumes: deny
+  inherited_cli_config: false
+  no_device_runtime: runc
+  no_device_nvidia_cuda_environment: neutralized
+
+resources:
+  cpus: 1.0
+  memory_mb: 1024
+  pids: 128
+  timeout_seconds: 300
+  output_mb: 1024
+  output_files: 10000
+  temporary_mb: 64
+  shared_memory_mb: 16

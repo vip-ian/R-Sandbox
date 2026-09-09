@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "r-sandbox"
+version = "0.1.0"
+description = "An AI-agent architecture for understanding and safely reproducing untrusted research repositories."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "R-Sandbox contributors" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=5.0"]
+yaml = ["PyYAML>=6.0"]
+
+[project.scripts]
+r-sandbox = "r_sandbox.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/r_sandbox"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+

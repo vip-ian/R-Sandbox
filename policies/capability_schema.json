@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://r-sandbox.local/schema/capability-contract.json",
+  "title": "R-Sandbox capability contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request_id", "category", "action", "target", "justification", "confidence", "risk"],
+  "properties": {
+    "request_id": {"type": "string", "pattern": "^cap-[a-f0-9]{32}$"},
+    "category": {
+      "enum": ["filesystem", "network", "process", "secret", "device", "resource", "side_effect"]
+    },
+    "action": {"type": "string", "minLength": 1},
+    "target": {"type": "string", "minLength": 1},
+    "justification": {"type": "string", "minLength": 1},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "risk": {"enum": ["low", "medium", "high", "critical"]},
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "detail"],
+        "properties": {
+          "source": {"type": "string"},
+          "detail": {"type": "string"},
+          "line": {"type": ["integer", "null"], "minimum": 1}
+        }
+      }
+    }
+  },
+  "allOf": [
+    {"if": {"properties": {"category": {"const": "filesystem"}}}, "then": {"properties": {"action": {"enum": ["read", "list", "stat", "write", "create", "delete_or_move", "mutate", "rename"]}}}},
+    {"if": {"properties": {"category": {"const": "network"}}}, "then": {"properties": {"action": {"enum": ["download", "send", "connect_unknown"]}}}},
+    {"if": {"properties": {"category": {"const": "process"}}}, "then": {"properties": {"action": {"enum": ["execute", "spawn"]}}}},
+    {"if": {"properties": {"category": {"const": "secret"}}}, "then": {"properties": {"action": {"enum": ["read", "read_environment"]}}}},
+    {"if": {"properties": {"category": {"const": "device"}}}, "then": {"properties": {"action": {"enum": ["access", "inspect"]}}}},
+    {"if": {"properties": {"category": {"const": "resource"}}}, "then": {"properties": {"action": {"enum": ["cpu", "memory_mb", "pids", "timeout_seconds", "output_mb", "output_files", "temporary_mb", "shared_memory_mb"]}}}},
+    {"if": {"properties": {"category": {"const": "side_effect"}}}, "then": {"properties": {"action": {"enum": ["dynamic_code", "delete", "overwrite", "publish", "push", "upload", "external_write"]}}}}
+  ]
+}

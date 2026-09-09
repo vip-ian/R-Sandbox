@@ -1,0 +1,30 @@
+# Reference policy contract. Runtime enforcement lives in
+# src/r_sandbox/policy/engine.py until a signed policy loader is implemented.
+version: 1
+
+never_approvable:
+  - host_secret_access
+  - credential_file_access
+  - arbitrary_data_upload
+  - private_or_link_local_network
+  - source_repository_write
+  - destructive_or_external_side_effect
+
+approval_required:
+  - exact_public_download_domain
+  - gpu_device
+  - uncertain_permission_expansion
+
+approval_scope:
+  key: capability_request_id
+  bound_to:
+    - repository_path
+    - snapshot_sha256
+    - research_goal
+    - capability_payload
+    - image_reference
+    - policy_version
+    - runtime_backend_and_platform
+  immutable_image_required_to_consume: true
+  supplied_per_invocation: true
+  cryptographic_expiry_or_one_time_nonce: not_implemented
